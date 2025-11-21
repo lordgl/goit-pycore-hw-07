@@ -18,46 +18,40 @@ def greeting() -> str:
     return "Hello, How can I assist you today?"
 
 
-def format_contact_line(name: str, phones: str, birthday: str) -> str:
+def build_contacts_showcase(rows: list[tuple[str, str, str]]) -> str:
     """
-    Create a dotted line with name on the left, phone centered, and birthday on the right.
-    Ensures the phone string is visually centered in the line.
+    Render all contacts as a colored, card-like block.
     """
-    phone_text = phones if phones else "No phone numbers"
-    birthday_text = birthday if birthday else "No birthday"
-    min_width = 60
-    total_width = max(min_width, len(name) + len(phone_text) + len(birthday_text) + 10)
-
-    line_chars = ['.'] * total_width
-    line_chars[0:len(name)] = name
-
-    birthday_start = total_width - len(birthday_text)
-    line_chars[birthday_start:birthday_start + len(birthday_text)] = birthday_text
-
-    phone_start = (total_width - len(phone_text)) // 2
-    line_chars[phone_start:phone_start + len(phone_text)] = phone_text
-
-    return "".join(line_chars)
-
-
-def build_contacts_table(lines: list[str]) -> str:
-    """
-    Wrap provided lines in an ASCII frame with a centered title row.
-    """
-    if not lines:
+    if not rows:
         return ""
 
-    title = "Contacts List"
-    content_width = max(len(title), *(len(line) for line in lines))
-    border = f"+{'-' * (content_width + 2)}+"
+    base_width = 64
+    header_text = " Address Book - All Contacts "
+    widest_line = max(
+        len(header_text),
+        max(len(f"[{idx}] {name}") for idx, (name, _, _) in enumerate(rows, 1)),
+        max(len(f"    Phones: {phones}") for _, phones, _ in rows),
+        max(len(f"    Birthday: {birthday}") for _, _, birthday in rows),
+    )
+    content_width = max(base_width, widest_line)
 
-    table_lines = [border]
-    table_lines.append(f"| {title.center(content_width)} |")
-    table_lines.append(border)
-    for line in lines:
-        table_lines.append(f"| {line.ljust(content_width)} |")
-    table_lines.append(border)
-    return "\n".join(table_lines)
+    top_border = style_text("=" * content_width, color=Fore.BLUE, bright=True)
+    divider = style_text("-" * content_width, color=Fore.BLUE)
+    header = style_text(header_text.center(content_width), color=Fore.BLUE, bright=True)
+
+    lines: list[str] = [top_border, header, top_border]
+
+    for idx, (name, phones, birthday) in enumerate(rows, 1):
+        name_line = style_text(f"[{idx}] {name}", color=Fore.CYAN, bright=True)
+        phone_line = f"    {style_text('Phones', color=Fore.BLUE, bright=True)}: {style_text(phones, color=Fore.GREEN)}"
+        birthday_line = f"    {style_text('Birthday', color=Fore.BLUE, bright=True)}: {style_text(birthday, color=Fore.MAGENTA)}"
+
+        lines.extend([name_line, phone_line, birthday_line])
+        if idx != len(rows):
+            lines.append(divider)
+
+    lines.append(top_border)
+    return "\n".join(lines)
 
 
 @input_error
@@ -298,10 +292,10 @@ def handle_all(args: list[str], address_book: AddressBook) -> None:
     for name, record in address_book.items():
         phones = "; ".join(phone.value for phone in record.phones) or "No phone numbers"
         birthday = record.birthday.value.strftime("%d.%m.%Y") if record.birthday else "No birthday"
-        contacts.append(format_contact_line(name, phones, birthday))
-        
-    table = build_contacts_table(contacts)
-    print(style_text(table, color=Fore.YELLOW))
+        contacts.append((name, phones, birthday))
+
+    showcase = build_contacts_showcase(contacts)
+    print(showcase)
 
 
 
