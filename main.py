@@ -169,11 +169,17 @@ def main():
     """
     colorama.init(autoreset=True)
     display_logo()
-    input_with_spinner("Press Enter to open the command palette... ")
+    try:
+        input_with_spinner("Press Enter to open the command palette... ")
+    except KeyboardInterrupt:
+        handle_exit([])
     print()
     print(main_menu())
     while True:
-        user_input = input(style_text(">> ", color=Fore.BLUE, bright=True))
+        try:
+            user_input = input(style_text(">> ", color=Fore.BLUE, bright=True))
+        except KeyboardInterrupt:
+            handle_exit([])
         command, args = parse_input(user_input)
         print()
         _handle_command(command, args)
