@@ -309,7 +309,7 @@ def handle_exit(args: list[str]) -> None:
         ValueError: If unexpected arguments are provided.
     """
     validate_args_count(args, 0, "exit/close/bye/q")
-    print("\n")
+    print()
     print(style_text(close(), color=Fore.MAGENTA, bright=True))
     print()
     raise SystemExit

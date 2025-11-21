@@ -172,6 +172,7 @@ def main():
     try:
         input_with_spinner("Press Enter to open the command palette... ")
     except KeyboardInterrupt:
+        print()
         handle_exit([])
     print()
     print(main_menu())
@@ -179,6 +180,7 @@ def main():
         try:
             user_input = input(style_text(">> ", color=Fore.BLUE, bright=True))
         except KeyboardInterrupt:
+            print()
             handle_exit([])
         command, args = parse_input(user_input)
         print()
