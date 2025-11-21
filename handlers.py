@@ -5,6 +5,7 @@ from colorama import Fore
 from helpers import (
     validate_name,
     validate_phone_number,
+    validate_birthday,
     input_error,
     display_success_message,
     validate_args_count,
@@ -15,6 +16,48 @@ from instances import AddressBook, Record
 
 def greeting() -> str:
     return "Hello, How can I assist you today?"
+
+
+def format_contact_line(name: str, phones: str, birthday: str) -> str:
+    """
+    Create a dotted line with name on the left, phone centered, and birthday on the right.
+    Ensures the phone string is visually centered in the line.
+    """
+    phone_text = phones if phones else "No phone numbers"
+    birthday_text = birthday if birthday else "No birthday"
+    min_width = 60
+    total_width = max(min_width, len(name) + len(phone_text) + len(birthday_text) + 10)
+
+    line_chars = ['.'] * total_width
+    line_chars[0:len(name)] = name
+
+    birthday_start = total_width - len(birthday_text)
+    line_chars[birthday_start:birthday_start + len(birthday_text)] = birthday_text
+
+    phone_start = (total_width - len(phone_text)) // 2
+    line_chars[phone_start:phone_start + len(phone_text)] = phone_text
+
+    return "".join(line_chars)
+
+
+def build_contacts_table(lines: list[str]) -> str:
+    """
+    Wrap provided lines in an ASCII frame with a centered title row.
+    """
+    if not lines:
+        return ""
+
+    title = "Contacts List"
+    content_width = max(len(title), *(len(line) for line in lines))
+    border = f"+{'-' * (content_width + 2)}+"
+
+    table_lines = [border]
+    table_lines.append(f"| {title.center(content_width)} |")
+    table_lines.append(border)
+    for line in lines:
+        table_lines.append(f"| {line.ljust(content_width)} |")
+    table_lines.append(border)
+    return "\n".join(table_lines)
 
 
 @input_error
@@ -70,6 +113,48 @@ def change_contact(name: str, new_phone_number: str, address_book: AddressBook) 
     return True
 
 
+@input_error
+def add_birthday(name: str, birthday: str, address_book: AddressBook) -> bool:
+    """Adds a birthday to an existing contact."""
+    if not validate_name(name):
+        raise ValueError("Invalid name format. Name should contain only alphabetic characters.")
+    if not validate_birthday(birthday):
+        raise ValueError("Invalid birthday format. Use DD.MM.YYYY.")
+
+    record = address_book.find(name)
+    if record is None:
+        raise ValueError("Contact not found.")
+
+    add_message = record.add_birthday(birthday)
+    if add_message != "Birthday is set":
+        raise ValueError(add_message)
+    return True
+
+
+@input_error
+def get_contact_birthday(name: str, address_book: AddressBook) -> str | bool:
+    """Returns a contact's birthday."""
+    if not validate_name(name):
+        raise ValueError("Invalid name format. Name should contain only alphabetic characters.")
+
+    record = address_book.find(name)
+    if record is None:
+        raise ValueError("Contact not found.")
+    if record.birthday is None:
+        raise ValueError(f"Birthday for {name} is not set.")
+
+    return record.birthday.value.strftime("%d.%m.%Y")
+
+
+@input_error
+def get_upcoming_birthdays(address_book: AddressBook) -> list | bool:
+    """Returns upcoming birthdays for the next week."""
+    upcoming = address_book.upcoming_birthdays()
+    if not upcoming:
+        raise ValueError("No upcoming birthdays within the next 7 days.")
+    return upcoming
+
+
 def close() -> str:
     return "Goodbye! Have a great day!"
 
@@ -120,6 +205,61 @@ def handle_change(args: list[str], address_book: AddressBook) -> None:
 
 
 @input_error
+def handle_add_birthday(args: list[str], address_book: AddressBook) -> None:
+    """
+    Handles the 'add-birthday' command to add a birthday to an existing contact.
+    Args:
+        args (list[str]): List of arguments provided with the command.
+        address_book (AddressBook): The address book storing contact records.
+    Raises:
+        ValueError: If the contact does not exist or if the input format is invalid.
+    """
+    validate_args_count(args, 2, "add-birthday [name] [DD.MM.YYYY]")
+    name, birthday = args
+    if add_birthday(name, birthday, address_book):
+        display_success_message(f"Birthday added for {name}: {birthday}")
+
+
+@input_error
+def handle_show_birthday(args: list[str], address_book: AddressBook) -> None:
+    """
+    Handles the 'show-birthday' command to display a contact's birthday.
+    Args:
+        args (list[str]): List of arguments provided with the command.
+        address_book (AddressBook): The address book storing contact records.
+    Raises:
+        ValueError: If the contact does not exist or if the birthday is not set.
+    """
+    validate_args_count(args, 1, "show-birthday [name]")
+    name = args[0]
+    birthday = get_contact_birthday(name, address_book)
+    if birthday:
+        name_part = style_text(name, color=Fore.BLUE, bright=True)
+        label_part = style_text("'s birthday: ", color=Fore.BLUE)
+        birthday_part = style_text(birthday, color=Fore.BLUE, bright=True)
+        print(f"{name_part}{label_part}{birthday_part}")
+
+
+@input_error
+def handle_birthdays(args: list[str], address_book: AddressBook) -> None:
+    """
+    Handles the 'birthdays' command to display upcoming birthdays within the next week.
+    Args:
+        args (list[str]): List of arguments provided with the command.
+        address_book (AddressBook): The address book storing contact records.
+    Raises:
+        ValueError: If bad arguments are provided or there are no upcoming birthdays.
+    """
+    validate_args_count(args, 0, "birthdays")
+    upcoming = get_upcoming_birthdays(address_book)
+    if upcoming:
+        lines = ["Upcoming birthdays (next 7 days):"]
+        for name, date_value in upcoming:
+            lines.append(f"{name}: {date_value.strftime('%d.%m.%Y')}")
+        print(style_text("\n".join(lines), color=Fore.YELLOW))
+
+
+@input_error
 def handle_phone(args: list[str], address_book: AddressBook) -> None:
     """
     Handles the 'phone' command to retrieve and display a contact's phone number(s).
@@ -154,12 +294,14 @@ def handle_all(args: list[str], address_book: AddressBook) -> None:
     validate_args_count(args, 0, "all")
     if not address_book:
         raise ValueError("No contacts found.")
-    contacts = ["Contacts List:"]
+    contacts = []
     for name, record in address_book.items():
         phones = "; ".join(phone.value for phone in record.phones) or "No phone numbers"
-        contacts.append(f"{name}: {phones}")
+        birthday = record.birthday.value.strftime("%d.%m.%Y") if record.birthday else "No birthday"
+        contacts.append(format_contact_line(name, phones, birthday))
         
-    print(style_text("\n".join(contacts), color=Fore.YELLOW))
+    table = build_contacts_table(contacts)
+    print(style_text(table, color=Fore.YELLOW))
 
 
 

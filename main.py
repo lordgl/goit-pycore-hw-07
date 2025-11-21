@@ -7,6 +7,9 @@ from handlers import (
     handle_hello,
     handle_add,
     handle_change,
+    handle_add_birthday,
+    handle_show_birthday,
+    handle_birthdays,
     handle_phone,
     handle_all,
     handle_exit,
@@ -35,6 +38,9 @@ def main_menu() -> str:
         f"  {option('* hello')} - Greet the user\n"
         f"  {option('* add [name] [phone_number]')} - Add a new contact (+7-15 digits or 0 +6-14 digits)\n"
         f"  {option('* change [name] [new_phone_number]')} - Update an existing contact's primary phone\n"
+        f"  {option('* add-birthday [name] [DD.MM.YYYY]')} - Add a birthday to a contact\n"
+        f"  {option('* show-birthday [name]')} - Show a contact's birthday\n"
+        f"  {option('* birthdays')} - List birthdays in the next 7 days\n"
         f"  {option('* phone [name]')} - Retrieve a contact's phone number(s)\n"
         f"  {option('* all')} - Display all contacts\n"
         f"  {option('* exit/close/bye/q')} - Exit the application\n"
@@ -49,6 +55,9 @@ COMMAND_HANDLERS = {
     'hello': handle_hello,
     'add': partial(handle_add, address_book=ADDRESS_BOOK),
     'change': partial(handle_change, address_book=ADDRESS_BOOK),
+    'add-birthday': partial(handle_add_birthday, address_book=ADDRESS_BOOK),
+    'show-birthday': partial(handle_show_birthday, address_book=ADDRESS_BOOK),
+    'birthdays': partial(handle_birthdays, address_book=ADDRESS_BOOK),
     'phone': partial(handle_phone, address_book=ADDRESS_BOOK),
     'all': partial(handle_all, address_book=ADDRESS_BOOK),
     'menu': partial(handle_menu, menu_provider=main_menu),

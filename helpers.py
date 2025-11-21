@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 from functools import wraps
+from datetime import datetime
 from colorama import Fore, Style
 import re
 
@@ -102,4 +103,19 @@ def validate_args_count(args: list[str], expected_len: int, usage_hint: str) -> 
     """
     if len(args) != expected_len:
         raise ValueError(f"Usage: {usage_hint}")
+    return True
+
+
+def validate_birthday(birthday: str) -> bool:
+    """
+    Validates the birthday format (DD.MM.YYYY).
+    Args:
+        birthday (str): The birthday string to validate.
+    Returns:
+        bool: True if the format is valid, False otherwise.
+    """
+    try:
+        datetime.strptime(birthday, "%d.%m.%Y")
+    except ValueError:
+        return False
     return True
